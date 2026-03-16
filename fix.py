@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-ESP-IDF Component Manager Helper Script
+ESP-IDF Component Manager Helper Script - Scan All External Libraries
 
-Generates a minimal CMakeLists.txt for non-ESP-IDF libraries,
-keeping glob to scan for source files. Print messages only
-appear when run manually.
+Automatically generates minimal CMakeLists.txt files for all libraries
+in managed_components/ that do not already have one.
 """
 
 import os
@@ -17,13 +16,13 @@ def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "
 
     Args:
         component_path: Path to the library folder (managed_components/<lib>)
-        src_dir: Subdirectory containing source files (default 'src')
-        include_dir: Subdirectory containing headers (default 'inc')
-        verbose: If True, prints status messages
+        src_dir: Subdirectory containing source files
+        include_dir: Subdirectory containing headers
+        verbose: Enables status messages
     """
     cmake_file = os.path.join(component_path, "CMakeLists.txt")
 
-    if not os.path.exists(component_path):
+    if not os.path.isdir(component_path):
         if verbose:
             print(f"Component path '{component_path}' does not exist. Skipping.")
         return
@@ -33,10 +32,9 @@ def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "
             print(f"CMakeLists.txt already exists for '{component_path}'. Skipping.")
         return
 
-    # Always write wildcard
+    # Always write wildcard line
     c_files_line = f'    SRCS "{src_dir}/*.c"\n'
 
-    # Write CMakeLists.txt
     with open(cmake_file, "w") as f:
         f.write("idf_component_register(\n")
         f.write(c_files_line)
@@ -44,15 +42,21 @@ def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "
         f.write(")\n")
 
     if verbose:
-        print(f"Created CMakeLists.txt for '{component_path}'")
+        print(f"[INFO] Created CMakeLists.txt for '{component_path}'")
 
+def scan_all_managed(root_path="managed_components", src_dir="src", include_dir="inc", verbose=False):
+    """
+    Scan all folders in managed_components and generate CMakeLists.txt if missing.
+    """
+    if not os.path.isdir(root_path):
+        if verbose:
+            print(f"managed_components folder '{root_path}' does not exist.")
+        return
+
+    for folder in os.listdir(root_path):
+        comp_path = os.path.join(root_path, folder)
+        if os.path.isdir(comp_path):
+            create_cmake(comp_path, src_dir, include_dir, verbose)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python create_cmake.py <component_path> [src_dir] [include_dir]")
-        sys.exit(1)
-
-    create_cmake(sys.argv[1],
-                 sys.argv[2] if len(sys.argv) > 2 else "src",
-                 sys.argv[3] if len(sys.argv) > 3 else "inc",
-                 verbose=True)
+    scan_all_managed(verbose=True)
