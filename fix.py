@@ -10,7 +10,7 @@ import os
 import sys
 from glob import glob
 
-def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "inc", verbose: bool = False):
+def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "inc", verbose: bool = True):
     """
     Creates a minimal CMakeLists.txt in the component folder.
 
@@ -24,16 +24,20 @@ def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "
 
     if not os.path.isdir(component_path):
         if verbose:
-            print(f"Component path '{component_path}' does not exist. Skipping.")
+            print(f"-- MANAGED FIX: Component path '{component_path}' does not exist. Skipping.")
         return
 
     if os.path.exists(cmake_file):
         if verbose:
-            print(f"CMakeLists.txt already exists for '{component_path}'. Skipping.")
+            print(f"-- MANAGED FIX: CMakeLists.txt already exists for '{component_path}'. Skipping.")
         return
 
-    # Always write wildcard line
-    c_files_line = f'    SRCS "{src_dir}/*.c"\n'
+    src_path = os.path.join(component_path, src_dir)
+    c_files = glob(os.path.join(src_path, "*.c"))
+
+    c_files_line = ""
+    for file in c_files:
+        c_files_line += f"    SRCS \"{src_dir}/{file.split('src' + os.sep, 1)[1]}\"\n"
 
     with open(cmake_file, "w") as f:
         f.write("idf_component_register(\n")
@@ -42,7 +46,7 @@ def create_cmake(component_path: str, src_dir: str = "src", include_dir: str = "
         f.write(")\n")
 
     if verbose:
-        print(f"[INFO] Created CMakeLists.txt for '{component_path}'")
+        print(f"-- MANAGED FIX: Created CMakeLists.txt for '{component_path}'")
 
 def scan_all_managed(root_path="managed_components", src_dir="src", include_dir="inc", verbose=False):
     """
@@ -50,7 +54,7 @@ def scan_all_managed(root_path="managed_components", src_dir="src", include_dir=
     """
     if not os.path.isdir(root_path):
         if verbose:
-            print(f"managed_components folder '{root_path}' does not exist.")
+            print(f"-- MANAGED FIX: managed_components folder '{root_path}' does not exist.")
         return
 
     for folder in os.listdir(root_path):
